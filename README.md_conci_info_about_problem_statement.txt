@@ -1,8 +1,1 @@
-This project implements the classic Tents Puzzle Game in Java Swing, with the unique
-requirement that the entire game logic is rebuilt using a different algorithmic strategy for
-each version. Each solver Backtracking, Greedy, Dynamic Programming, Divide and Conquer,
-Branch and Bound, Graph Based Matching, and Heuristics runs on the same user interface
-but uses completely different underlying techniques to generate and solve puzzles. 
-This demonstrates how one problem can be approached from multiple computational perspectives
-while producing identical gameplay behavior, making the project both algorithmically 
-rich and visually intuitive for evaluation.
+This project implements the classic Tents & Trees puzzle game using Java Swing, focusing on a Greedy algorithm–based CPU solver. The game follows standard rules such as pairing each tree with exactly one adjacent tent, preventing tents from touching, and satisfying row and column constraints. The CPU makes decisions step by step using greedy logic, applying forced row and column rules, forced tree neighbor rules, simple heuristics, and a fallback mechanism when needed. All decisions are made locally without future planning or backtracking, demonstrating how greedy strategies can be applied to constraint-based puzzle games while maintaining correct gameplay and a clear visual interface.
