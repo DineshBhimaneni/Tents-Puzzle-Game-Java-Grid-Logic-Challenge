@@ -29,6 +29,15 @@ public class GreedyCPU {
         return applySolutionFallback(state);
     }
 
+    // Only applies logically forced moves, safe for backtracking propagation
+    public static boolean makeSafeMove(GameState state) {
+        if (applyForcedMoves(state))
+            return true;
+        if (applySingleNeighborTree(state))
+            return true;
+        return false;
+    }
+
     private static boolean applyForcedMoves(GameState state) {
         int n = state.getSize();
 

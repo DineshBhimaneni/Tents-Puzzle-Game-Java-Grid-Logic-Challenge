@@ -356,4 +356,28 @@ public class GameState {
 }
 
      */
+    public GameState(GameState other) {
+        this.n = other.n;
+        this.board = new int[n][n];
+        this.solution = new int[n][n]; // solution is static/read-only usually, but we copy for safety
+        this.trees = new ArrayList<>(other.trees); // Shallow copy of points is fine since Point is immutable-ish here
+        this.rowTarget = new int[n];
+        this.colTarget = new int[n];
+        this.rowUsed = new int[n];
+        this.colUsed = new int[n];
+
+        copyDataFrom(other);
+    }
+
+    public void copyDataFrom(GameState other) {
+        for(int r=0; r<n; r++) {
+            System.arraycopy(other.board[r], 0, this.board[r], 0, n);
+            System.arraycopy(other.solution[r], 0, this.solution[r], 0, n);
+        }
+        System.arraycopy(other.rowTarget, 0, this.rowTarget, 0, n);
+        System.arraycopy(other.colTarget, 0, this.colTarget, 0, n);
+        System.arraycopy(other.rowUsed, 0, this.rowUsed, 0, n);
+        System.arraycopy(other.colUsed, 0, this.colUsed, 0, n);
+        // trees list is final and structural, assumed constant for a puzzle instance
+    }
 }

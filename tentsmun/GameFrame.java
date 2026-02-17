@@ -59,6 +59,10 @@ public class GameFrame extends JFrame {
         btnSolve.setAlignmentX(Component.CENTER_ALIGNMENT);
         btnSolve.addActionListener(e -> doSolveAll());
 
+        JButton btnDivideConquer = new JButton("Divide & Conquer Move");
+        btnDivideConquer.setAlignmentX(Component.CENTER_ALIGNMENT);
+        btnDivideConquer.addActionListener(e -> doDivideConquerMove());
+
         JButton btnSafe = new JButton("Instructions");
         btnSafe.setAlignmentX(Component.CENTER_ALIGNMENT);
         btnSafe.addActionListener(e -> showInstructions());
@@ -75,6 +79,8 @@ public class GameFrame extends JFrame {
         p.add(btnGreedy);
         p.add(Box.createVerticalStrut(10));
         p.add(btnSolve);
+        p.add(Box.createVerticalStrut(10));
+        p.add(btnDivideConquer);
         p.add(Box.createVerticalStrut(10));
         p.add(btnSafe);
         p.add(Box.createVerticalStrut(20));
@@ -101,6 +107,24 @@ public class GameFrame extends JFrame {
         GreedyCPU.solveAll(gameState);
         boardPanel.repaint();
         checkAutoCompletion();
+    }
+
+    private void doDivideConquerMove() {
+        if (gameState.isPuzzleComplete()) {
+            JOptionPane.showMessageDialog(this, "Puzzle already complete!");
+            return;
+        }
+
+        // Apply a single D&C step
+        boolean moved = DivideConquerCPU.makeMove(gameState);
+
+        boardPanel.repaint();
+        if (moved) {
+            checkAutoCompletion();
+        } else {
+            JOptionPane.showMessageDialog(this,
+                    "Divide & Conquer could not find a logical move from this state.\n(The board might be unsolvable in this state.)");
+        }
     }
 
     private void askSizeAndRestart() {
