@@ -5,105 +5,153 @@ import java.util.List;
 public class DivideConquerCPU {
 
     /**
-     * Attempts to solve the game state using a Divide and Conquer (Recursive
-     * Backtracking) strategy.
-     * 1. Propagates constraints using the Greedy solver.
-     * 2. If solved, returns true.
-     * 3. If invalid, returns false (backtrack).
-     * 4. If stuck but valid, picks a branching move (placing a tent for a
-     * constrained tree) and recurses.
+     * Attempts to solve the game state using a Divide & Conquer strategy.
+     * Divided into independent regions (connected components of dependent trees).
+     * Solves each region deterministically without backtracking or guessing.
      */
     public static boolean solve(GameState state) {
-        // 1. Propagate constraints using Greedy logic (Safe moves only)
-        boolean changed = true;
-        while (changed) {
-            changed = GreedyCPU.makeSafeMove(state);
-
-            // Check for immediate invalid states during propagation
-            if (!isValidState(state)) {
-                return false;
-            }
-        }
-
-        // 2. Check if the puzzle is completely solved
-        if (state.isPuzzleComplete()) {
+        List<Point> trees = state.getTrees();
+        if (trees.isEmpty())
             return true;
-        }
 
-        // 3. Divide: Find a branching candidate
-        // Heuristic: Pick the tree with the fewest valid remaining tent spots (Minimum
-        // Remaining Values)
-        Point bestTree = null;
-        List<Point> bestMoves = null;
-        int minMoves = Integer.MAX_VALUE;
+        // 1. Divide: Partition trees into independent regions
+        List<List<Point>> regions = divideIntoRegions(state, trees);
 
-        for (Point tree : state.getTrees()) {
-            if (isTreeSatisfied(state, tree))
-                continue;
-
-            List<Point> validSpots = getValidTentSpots(state, tree);
-
-            // If a tree has 0 valid spots but is not satisfied, this path is dead
-            if (validSpots.isEmpty()) {
-                return false;
-            }
-
-            if (validSpots.size() < minMoves) {
-                minMoves = validSpots.size();
-                bestTree = tree;
-                bestMoves = validSpots;
-                // Optimization: If we find a tree with only 1 move, we could technically treat
-                // it as forced,
-                // but GreedyCPU should have caught that.
+        // 2. Conquer: Solve each region independently
+        boolean allSolved = true;
+        for (List<Point> region : regions) {
+            if (!solveRegion(state, region)) {
+                allSolved = false;
+                // Continue to other regions even if one fails (deterministic behavior)
             }
         }
 
-        if (bestTree == null) {
-            // No unsatisfied trees found, but isPuzzleComplete returned false?
-            // This might happen if row/col counts are wrong even if trees are happy.
-            return false;
+        return allSolved && state.isPuzzleComplete();
+    }
+
+    /**
+     * Partitions trees into connected components (regions) based on dependency.
+     * Two trees are dependent if they share a possible tent cell or if their
+     * possible tent cells touch.
+     */
+    private static List<List<Point>> divideIntoRegions(GameState state, List<Point> trees) {
+        int tSize = trees.size();
+        boolean[][] adj = new boolean[tSize][tSize];
+
+        // Precompute valid spots for each tree to build dependency graph
+        List<List<Point>> treeValidSpots = new ArrayList<>();
+        for (Point tree : trees) {
+            treeValidSpots.add(getValidTentSpots(state, tree));
         }
 
-        // 4. Conquer: Recursively try each valid move
-        for (Point move : bestMoves) {
-            // Clone the state to creating an independent branch
-            GameState nextState = new GameState(state);
-
-            // Apply the move (Divide)
-            nextState.placeTent(move.x, move.y);
-
-            // Recurse (Conquer)
-            if (solve(nextState)) {
-                // If the recursive call succeeded, we found the solution!
-                // Copy the solution back to the original state object so the UI sees it.
-                state.copyDataFrom(nextState);
-                return true;
+        for (int i = 0; i < tSize; i++) {
+            for (int j = i + 1; j < tSize; j++) {
+                if (areTreesDependent(treeValidSpots.get(i), treeValidSpots.get(j))) {
+                    adj[i][j] = adj[j][i] = true;
+                }
             }
-            // If solve returns false, we discard nextState and loop to the next option
-            // (Backtrack)
         }
 
+        List<List<Point>> regions = new ArrayList<>();
+        boolean[] visited = new boolean[tSize];
+        for (int i = 0; i < tSize; i++) {
+            if (!visited[i]) {
+                List<Point> region = new ArrayList<>();
+                List<Integer> queue = new ArrayList<>();
+                queue.add(i);
+                visited[i] = true;
+                int head = 0;
+                while (head < queue.size()) {
+                    int curr = queue.get(head++);
+                    region.add(trees.get(curr));
+                    for (int next = 0; next < tSize; next++) {
+                        if (adj[curr][next] && !visited[next]) {
+                            visited[next] = true;
+                            queue.add(next);
+                        }
+                    }
+                }
+                regions.add(region);
+            }
+        }
+        return regions;
+    }
+
+    private static boolean areTreesDependent(List<Point> spots1, List<Point> spots2) {
+        for (Point p1 : spots1) {
+            for (Point p2 : spots2) {
+                // Share same cell
+                if (p1.equals(p2))
+                    return true;
+                // Touch each other (adjacent including diagonals)
+                if (Math.abs(p1.x - p2.x) <= 1 && Math.abs(p1.y - p2.y) <= 1)
+                    return true;
+            }
+        }
         return false;
     }
 
-    // Helper: Check if the current partial state is valid (no broken constraints)
-    // We already know GreedyCPU checks individual move validity, but we double
-    // check global constraints if needed.
-    // For now, relies on GreedyCPU's placement checks and local checks.
-    private static boolean isValidState(GameState state) {
-        int n = state.getSize();
+    /**
+     * Solves a single region using deterministic constraint shrinking.
+     */
+    private static boolean solveRegion(GameState state, List<Point> region) {
+        List<Point> remainingTrees = new ArrayList<>(region);
 
-        // Check if any row/col exceeded target
-        for (int i = 0; i < n; i++) {
-            if (state.getRowUsed(i) > state.getRowTarget(i))
+        while (!remainingTrees.isEmpty()) {
+            // Filter out trees that are already satisfied
+            remainingTrees.removeIf(tree -> isTreeSatisfied(state, tree));
+            if (remainingTrees.isEmpty())
+                break;
+
+            // 4.1 Compute Valid Cells for each tree in region
+            List<List<Point>> allValidSpots = new ArrayList<>();
+            for (Point tree : remainingTrees) {
+                allValidSpots.add(getValidTentSpots(state, tree));
+            }
+
+            // 4.2 Manual Sort trees by number of valid positions
+            manualSort(remainingTrees, allValidSpots);
+
+            // 4.3 Pick Most Constrained Tree
+            Point mostConstrainedTree = remainingTrees.get(0);
+            List<Point> validSpots = allValidSpots.get(0);
+
+            // 4.4 Deterministic Check
+            if (validSpots.size() == 1) {
+                // 4.5 Update Board
+                Point spot = validSpots.get(0);
+                state.placeTent(spot.x, spot.y);
+                // 4.6 Remove Tree (handled by next iteration's filter or explicit remove)
+                remainingTrees.remove(0);
+            } else {
+                // Stop entire algorithm for this region if not deterministic
                 return false;
-            if (state.getColUsed(i) > state.getColTarget(i))
-                return false;
+            }
         }
-
-        // Note: We don't check for "less than" target here because the board is
-        // partially filled.
         return true;
+    }
+
+    /**
+     * Manual selection sort to avoid built-in sort.
+     */
+    private static void manualSort(List<Point> trees, List<List<Point>> spots) {
+        int n = trees.size();
+        for (int i = 0; i < n - 1; i++) {
+            int minIdx = i;
+            for (int j = i + 1; j < n; j++) {
+                if (spots.get(j).size() < spots.get(minIdx).size()) {
+                    minIdx = j;
+                }
+            }
+            // Swap
+            Point tempTree = trees.get(minIdx);
+            trees.set(minIdx, trees.get(i));
+            trees.set(i, tempTree);
+
+            List<Point> tempSpots = spots.get(minIdx);
+            spots.set(minIdx, spots.get(i));
+            spots.set(i, tempSpots);
+        }
     }
 
     private static boolean isTreeSatisfied(GameState state, Point tree) {
@@ -125,12 +173,6 @@ public class DivideConquerCPU {
             int nr = tree.x + d[0];
             int nc = tree.y + d[1];
             if (state.inBounds(nr, nc) && state.getCell(nr, nc) == GameState.EMPTY) {
-                // We must check if placing a tent here would be valid
-                // We can reuse the logic from GreedyCPU essentially, but we need access to it.
-                // Since GreedyCPU logic is private/static, we might duplicate or expose it.
-                // For now, let's duplicate the basic check or make GreedyCPU public.
-                // Actually, GameState has placeTent which just sets it.
-                // We need to simulate checking if it's a legal spot.
                 if (isLegalPlacement(state, nr, nc)) {
                     spots.add(new Point(nr, nc));
                 }
@@ -139,42 +181,45 @@ public class DivideConquerCPU {
         return spots;
     }
 
-    // Finds a solution from the current state and applies only one tent placement
-    // (the next logical step)
     public static boolean makeMove(GameState state) {
-        if (state.isPuzzleComplete())
-            return false;
+        // Since the requirement says "Solve the Tents board",
+        // and "Each tent placement reduces the problem size",
+        // we can just run the solver and if it placed something, we are good.
+        // However, the user might want a single move UI.
+        // Let's implement it to find the first deterministic move.
 
-        // 1. Working on a clone to find the full solution
-        GameState clone = new GameState(state);
-        boolean solved = solve(clone);
+        List<Point> trees = state.getTrees();
+        List<List<Point>> regions = divideIntoRegions(state, trees);
 
-        if (!solved)
-            return false;
+        for (List<Point> region : regions) {
+            List<Point> remainingTrees = new ArrayList<>(region);
+            remainingTrees.removeIf(tree -> isTreeSatisfied(state, tree));
+            if (remainingTrees.isEmpty())
+                continue;
 
-        // 2. Find a difference between current state and solved state
-        int n = state.getSize();
-        for (int r = 0; r < n; r++) {
-            for (int c = 0; c < n; c++) {
-                if (state.getCell(r, c) == GameState.EMPTY && clone.getCell(r, c) == GameState.TENT) {
-                    state.placeTent(r, c);
-                    return true;
-                }
+            List<List<Point>> allValidSpots = new ArrayList<>();
+            for (Point tree : remainingTrees) {
+                allValidSpots.add(getValidTentSpots(state, tree));
+            }
+
+            manualSort(remainingTrees, allValidSpots);
+
+            if (!allValidSpots.isEmpty() && allValidSpots.get(0).size() == 1) {
+                Point spot = allValidSpots.get(0).get(0);
+                state.placeTent(spot.x, spot.y);
+                return true;
             }
         }
         return false;
     }
 
-    // Re-implementing basic legality check similar to GreedyCPU's isValidTentSpot
-    // ideally we should refactor GreedyCPU to expose this, but to keep files
-    // separate and safe:
     private static boolean isLegalPlacement(GameState state, int r, int c) {
         if (!state.inBounds(r, c))
             return false;
         if (state.getCell(r, c) != GameState.EMPTY)
             return false;
 
-        // Adjacency check
+        // Adjacency check (tents cannot touch)
         for (int dr = -1; dr <= 1; dr++) {
             for (int dc = -1; dc <= 1; dc++) {
                 if (dr == 0 && dc == 0)
@@ -193,10 +238,7 @@ public class DivideConquerCPU {
         if (state.getColUsed(c) >= state.getColTarget(c))
             return false;
 
-        // Must be adjacent to at least one tree (that doesn't already have a tent?)
-        // The rule is "Tent must be attached to a tree".
-        // In our generator/logic, we usually ensure 1-1 mapping.
-        // For a valid move, it must be next to *some* tree.
+        // Must be next to some tree
         boolean hasTree = false;
         int[][] dirs = { { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } };
         for (int[] d : dirs) {
@@ -209,4 +251,5 @@ public class DivideConquerCPU {
         }
         return hasTree;
     }
+
 }
