@@ -9,7 +9,7 @@ public class DivideConquerTest {
         System.out.println("Testing GameState copy...");
         GameState s1 = new GameState(8);
         s1.generateSolvablePuzzle();
-        s1.placeTent(0, 0); // Assuming 0,0 is valid or just setting it
+        s1.placeTent(0, 0);
 
         GameState s2 = new GameState(s1);
 
@@ -18,7 +18,6 @@ public class DivideConquerTest {
         if (s1.getCell(0, 0) != s2.getCell(0, 0))
             throw new RuntimeException("Board Content mismatch");
 
-        // Modify s2 and ensure s1 is not changed
         s2.setCell(1, 1, GameState.TENT);
         if (s1.getCell(1, 1) == GameState.TENT)
             throw new RuntimeException("Deep copy failed - s1 modified");
@@ -28,18 +27,15 @@ public class DivideConquerTest {
 
     private static void testSolve() {
         System.out.println("Testing DivideConquerCPU solve...");
-        // 100 random tests
+
         for (int i = 0; i < 100; i++) {
             GameState s = new GameState(8);
             s.generateSolvablePuzzle();
 
-            // Try to solve
             boolean result = DivideConquerCPU.solve(s);
             if (!result) {
                 System.out.println("Failed to solve a solvable puzzle!");
-                // Note: It's possible generateSolvablePuzzle makes something logic solvable but
-                // our D&C fails?
-                // D&C shouldn't fail if it's solvable.
+
                 throw new RuntimeException("Solver failed");
             }
             if (!s.isPuzzleComplete()) {
