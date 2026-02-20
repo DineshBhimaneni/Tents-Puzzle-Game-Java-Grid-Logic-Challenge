@@ -34,7 +34,7 @@ public class DivideConquerCPU {
         boolean leftPlaced = solveRecursive(state, leftCol, mid);
         boolean rightPlaced = solveRecursive(state, mid + 1, rightCol);
 
-        if (!validateMerge(state, mid)) {
+        if (!Merge(state, mid)) {
 
             return false;
         }
@@ -67,7 +67,7 @@ public class DivideConquerCPU {
         return placedSomething;
     }
 
-    private static boolean validateMerge(GameState state, int mid) {
+    private static boolean Merge(GameState state, int mid) {
         int n = state.getSize();
 
         if (mid + 1 < n) {
