@@ -51,6 +51,20 @@ public class DivideConquerCPU {
             }
         }
 
+
+        for (int i = 0; i < treesInCol.size() - 1; i++) {
+            for (int j = 0; j < treesInCol.size() - i - 1; j++) {
+                Point t1 = treesInCol.get(j);
+                Point t2 = treesInCol.get(j + 1);
+                int spots1 = getValidTentSpots(state, t1).size();
+                int spots2 = getValidTentSpots(state, t2).size();
+                if (spots1 > spots2) {
+                    treesInCol.set(j, t2);
+                    treesInCol.set(j + 1, t1);
+                }
+            }
+        }
+
         for (Point tree : treesInCol) {
             if (isTreeSatisfied(state, tree))
                 continue;
@@ -62,7 +76,6 @@ public class DivideConquerCPU {
                 state.placeTent(spot.x, spot.y);
                 placedSomething = true;
             }
-
         }
         return placedSomething;
     }
