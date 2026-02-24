@@ -4,6 +4,16 @@ import java.util.List;
 
 public class DivideConquerCPU {
 
+    private static class Node {
+        Point tree;
+        Node next;
+
+        Node(Point tree) {
+            this.tree = tree;
+            this.next = null;
+        }
+    }
+
     public static boolean solve(GameState state) {
         if (state.getSize() == 0)
             return true;
@@ -51,23 +61,31 @@ public class DivideConquerCPU {
             }
         }
 
+        Node head = null;
+        for (Point tree : treesInCol) {
+            int spots = getValidTentSpots(state, tree).size();
+            Node newNode = new Node(tree);
 
-        for (int i = 0; i < treesInCol.size() - 1; i++) {
-            for (int j = 0; j < treesInCol.size() - i - 1; j++) {
-                Point t1 = treesInCol.get(j);
-                Point t2 = treesInCol.get(j + 1);
-                int spots1 = getValidTentSpots(state, t1).size();
-                int spots2 = getValidTentSpots(state, t2).size();
-                if (spots1 > spots2) {
-                    treesInCol.set(j, t2);
-                    treesInCol.set(j + 1, t1);
+            if (head == null || getValidTentSpots(state, head.tree).size() > spots) {
+                newNode.next = head;
+                head = newNode;
+            } else {
+                Node current = head;
+                while (current.next != null && getValidTentSpots(state, current.next.tree).size() <= spots) {
+                    current = current.next;
                 }
+                newNode.next = current.next;
+                current.next = newNode;
             }
         }
 
-        for (Point tree : treesInCol) {
-            if (isTreeSatisfied(state, tree))
+        Node current = head;
+        while (current != null) {
+            Point tree = current.tree;
+            if (isTreeSatisfied(state, tree)) {
+                current = current.next;
                 continue;
+            }
 
             List<Point> validSpots = getValidTentSpots(state, tree);
 
@@ -76,6 +94,7 @@ public class DivideConquerCPU {
                 state.placeTent(spot.x, spot.y);
                 placedSomething = true;
             }
+            current = current.next;
         }
         return placedSomething;
     }
