@@ -39,3 +39,71 @@ public class BacktrackingCPU {
 
         callStack.push(new Frame(0));
     }
+    public boolean step() {
+        if (callStack.isEmpty()) {
+            return false;
+        }
+
+        Frame current = callStack.peek();
+
+        if (current.treeIndex == trees.size()) {
+            if (isValidFinalState(state)) {
+                return true;
+            } else {
+                callStack.pop();
+                return false;
+            }
+        }
+
+        Point tree = trees.get(current.treeIndex);
+
+        if (current.isExploring) {
+            int prevDir = current.dirIndex - 1;
+            int[] d = dirs[prevDir];
+            int nr = tree.x + d[0];
+            int nc = tree.y + d[1];
+
+            state.setCell(nr, nc, GameState.EMPTY);
+            treeAssigned[current.treeIndex] = false;
+            current.isExploring = false;
+
+            return false;
+        }
+
+        while (current.dirIndex < dirs.length) {
+            int dirToTry = current.dirIndex;
+            int[] d = dirs[dirToTry];
+            current.dirIndex++;
+
+            int nr = tree.x + d[0];
+            int nc = tree.y + d[1];
+
+            if (isValidPlacement(state, nr, nc)) {
+                state.placeTent(nr, nc);
+                treeAssigned[current.treeIndex] = true;
+
+                current.isExploring = true;
+
+                callStack.push(new Frame(current.treeIndex + 1));
+
+                return false;
+            }
+        }
+
+        callStack.pop();
+        return false;
+    }
+
+    public boolean isExhausted() {
+        return callStack.isEmpty();
+    }
+
+    public boolean isSolved() {
+        return currentTreeIndex() == trees.size() && isValidFinalState(state);
+    }
+
+    private int currentTreeIndex() {
+        if (callStack.isEmpty())
+            return -1;
+        return callStack.peek().treeIndex;
+    }
