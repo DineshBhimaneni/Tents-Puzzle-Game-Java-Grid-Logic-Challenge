@@ -132,26 +132,4 @@ public class BacktrackingCPU {
 
         return true;
     }
-    private static boolean isValidFinalState(GameState state) {
-        int n = state.getSize();
-        for (int i = 0; i < n; i++) {
-            if (state.getRowUsed(i) != state.getRowTarget(i))
-                return false;
-            if (state.getColUsed(i) != state.getColTarget(i))
-                return false;
-        }
-        return state.isPuzzleComplete();
-    }
-
-    private static class Frame {
-        int treeIndex;
-        int dirIndex;
-        boolean isExploring;
-
-        Frame(int treeIndex) {
-            this.treeIndex = treeIndex;
-            this.dirIndex = 0;
-            this.isExploring = false;
-        }
-    }
-}
+    
