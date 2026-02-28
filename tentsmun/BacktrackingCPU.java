@@ -107,3 +107,28 @@ public class BacktrackingCPU {
             return -1;
         return callStack.peek().treeIndex;
     }
+    private static boolean isValidPlacement(GameState state, int r, int c) {
+        if (!state.inBounds(r, c))
+            return false;
+        if (state.getCell(r, c) != GameState.EMPTY)
+            return false;
+
+        if (state.getRowUsed(r) >= state.getRowTarget(r))
+            return false;
+        if (state.getColUsed(c) >= state.getColTarget(c))
+            return false;
+
+        for (int dr = -1; dr <= 1; dr++) {
+            for (int dc = -1; dc <= 1; dc++) {
+                if (dr == 0 && dc == 0)
+                    continue;
+                int nr = r + dr;
+                int nc = c + dc;
+                if (state.inBounds(nr, nc) && state.getCell(nr, nc) == GameState.TENT) {
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    }
