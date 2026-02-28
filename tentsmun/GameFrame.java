@@ -7,6 +7,9 @@ public class GameFrame extends JFrame {
     private BoardPanel boardPanel;
     private JLabel statusLabel;
 
+    // Stateful Backtracking Solver
+    private BacktrackingCPU backtrackingSolver;
+
     public GameFrame() {
         setTitle("Tents & Trees");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -20,6 +23,9 @@ public class GameFrame extends JFrame {
     private void initNewGame(int size) {
         gameState = new GameState(size);
         gameState.generateSolvablePuzzle();
+
+        // Reset the stateful solver
+        backtrackingSolver = new BacktrackingCPU(gameState);
 
         if (boardPanel != null)
             remove(boardPanel);
@@ -67,6 +73,10 @@ public class GameFrame extends JFrame {
         btnSafe.setAlignmentX(Component.CENTER_ALIGNMENT);
         btnSafe.addActionListener(e -> showInstructions());
 
+        JButton btnBacktracking = new JButton("Backtracking Step");
+        btnBacktracking.setAlignmentX(Component.CENTER_ALIGNMENT);
+        btnBacktracking.addActionListener(e -> doBacktrackingStep());
+
         statusLabel = new JLabel("Welcome!");
         statusLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
 
@@ -81,6 +91,8 @@ public class GameFrame extends JFrame {
         p.add(btnSolve);
         p.add(Box.createVerticalStrut(10));
         p.add(btnDivideConquer);
+        p.add(Box.createVerticalStrut(10));
+        p.add(btnBacktracking);
         p.add(Box.createVerticalStrut(10));
         p.add(btnSafe);
         p.add(Box.createVerticalStrut(20));
@@ -124,6 +136,34 @@ public class GameFrame extends JFrame {
         } else {
             JOptionPane.showMessageDialog(this,
                     "Divide & Conquer could not find a logical move from this state.\n(The board might be unsolvable in this state.)");
+        }
+    }
+
+    private void doBacktrackingStep() {
+        if (gameState.isPuzzleComplete()) {
+            JOptionPane.showMessageDialog(this, "Puzzle already complete!");
+            return;
+        }
+
+        if (backtrackingSolver == null) {
+            backtrackingSolver = new BacktrackingCPU(gameState);
+        }
+
+        if (backtrackingSolver.isExhausted()) {
+            JOptionPane.showMessageDialog(this,
+                    "Backtracking exhausted all options. This state is unsolvable or a contradiction was found.");
+            return;
+        }
+
+        // Perform exactly one state machine step (Place tent OR Undo tent)
+        boolean solved = backtrackingSolver.step();
+        boardPanel.repaint();
+
+        if (solved) {
+            checkAutoCompletion();
+        } else if (backtrackingSolver.isExhausted()) {
+            JOptionPane.showMessageDialog(this,
+                    "Backtracking exhausted last option and failed.");
         }
     }
 
